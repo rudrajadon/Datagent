@@ -1,0 +1,189 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Animation utilities (tw-animate-css equivalent) */
+/* Add your animate CSS import here if you use a plugin */
+/* @import "tw-animate-css"; */
+
+@layer base {
+  :root {
+    /* Professional Dark Theme - Two Color Scheme */
+    --primary: #ffffff;
+    --primary-foreground: #1a1a1a;
+    --sidebar-primary: #ffffff;
+    --sidebar-primary-foreground: #1a1a1a;
+
+    /* Chart colors - Grayscale */
+    --chart-1: #808080;
+    --chart-2: #696969;
+    --chart-3: #505050;
+    --chart-4: #373737;
+    --chart-5: #1e1e1e;
+
+    --radius: 0.5rem;
+
+    --background: #0f0f0f;
+    --foreground: #e8e8e8;
+    --card: #1a1a1a;
+    --card-foreground: #e8e8e8;
+    --popover: #1a1a1a;
+    --popover-foreground: #e8e8e8;
+
+    --secondary: #2d2d2d;
+    --secondary-foreground: #b8b8b8;
+
+    --muted: #3a3a3a;
+    --muted-foreground: #888888;
+
+    --accent: #2d2d2d;
+    --accent-foreground: #e8e8e8;
+
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+
+    --border: #2d2d2d;
+    --input: #1a1a1a;
+    --ring: #4a4a4a;
+
+    --sidebar: #1a1a1a;
+    --sidebar-foreground: #e8e8e8;
+    --sidebar-accent: #2d2d2d;
+    --sidebar-accent-foreground: #e8e8e8;
+    --sidebar-border: #2d2d2d;
+    --sidebar-ring: #4a4a4a;
+  }
+
+  .dark {
+    --primary: #ffffff;
+    --primary-foreground: #1a1a1a;
+    --sidebar-primary: #ffffff;
+    --sidebar-primary-foreground: #1a1a1a;
+
+    --background: #0f0f0f;
+    --foreground: #e8e8e8;
+    --card: #1a1a1a;
+    --card-foreground: #e8e8e8;
+    --popover: #1a1a1a;
+    --popover-foreground: #e8e8e8;
+
+    --secondary: #2d2d2d;
+    --secondary-foreground: #b8b8b8;
+
+    --muted: #3a3a3a;
+    --muted-foreground: #888888;
+
+    --accent: #2d2d2d;
+    --accent-foreground: #e8e8e8;
+
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+
+    --border: #2d2d2d;
+    --input: #1a1a1a;
+    --ring: #4a4a4a;
+
+    --chart-1: #808080;
+    --chart-2: #696969;
+    --chart-3: #505050;
+    --chart-4: #373737;
+    --chart-5: #1e1e1e;
+
+    --sidebar: #1a1a1a;
+    --sidebar-foreground: #e8e8e8;
+    --sidebar-accent: #2d2d2d;
+    --sidebar-accent-foreground: #e8e8e8;
+    --sidebar-border: #2d2d2d;
+    --sidebar-ring: #4a4a4a;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1280px;
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .message-enter {
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  @keyframes pulse-dot {
+    0%,
+    60%,
+    100% {
+      opacity: 0.3;
+    }
+    30% {
+      opacity: 1;
+    }
+  }
+  .delay-100 {
+    animation-delay: 0.1s;
+  }
+  .delay-200 {
+    animation-delay: 0.2s;
+  }
+
+  .input-bar {
+    background-color: #2d2d2d;
+    border: 1px solid #3a3a3a;
+    border-radius: 1.5rem;
+  }
+  .input-bar-focus:focus {
+    border-color: #4a4a4a;
+    box-shadow: 0 0 0 1px #4a4a4a;
+  }
+  .hover-subtle {
+    transition-property:
+      color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-duration: 200ms;
+  }
+  .hover-subtle:hover {
+    background-color: #2d2d2d;
+  }
+}
