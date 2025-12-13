@@ -21,6 +21,7 @@ import {
   Trash2,
   Menu,
   X,
+  Search,
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useChat } from "@/hooks/use-chat";
@@ -52,6 +53,7 @@ export default function ChatPage() {
 
   const [inputValue, setInputValue] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,98 +112,113 @@ export default function ChatPage() {
       {/* Sidebar */}
       <aside
         className={`${
-          sidebarOpen ? "w-64" : "w-0"
+          sidebarOpen ? "w-84" : "w-16"
         } bg-[#1A1A1A] border-r border-[#2D2D2D] transition-all duration-300 overflow-hidden flex flex-col`}
       >
         <div className="p-4 border-b border-[#2D2D2D]">
+          <div className="flex items-center justify-between gap-2 mb-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="text-gray-400 hover:bg-[#2D2D2D] hover:text-gray-200 p-2 shrink-0"
+            >
+              <Menu size={26} />
+            </Button>
+            {sidebarOpen && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:bg-[#2D2D2D] hover:text-gray-200 p-2 shrink-0"
+              >
+                <Search size={26} />
+              </Button>
+            )}
+          </div>
           <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setShouldAnimate(false);
               createNewSession();
             }}
-            className="w-full bg-white hover:bg-gray-200 text-black rounded-lg flex items-center justify-center gap-2 font-medium"
+            className="w-full text-gray-400 hover:bg-[#2D2D2D] hover:text-gray-200 p-2 justify-start"
           >
-            <Plus size={18} />
-            New chat
+            <Plus size={26} className={sidebarOpen ? "mr-2" : ""} />
+            {sidebarOpen && "New chat"}
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {sessions.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-8">
-              No chats yet
-            </p>
-          ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  currentSessionId === session.id
-                    ? "bg-[#2D2D2D]"
-                    : "hover:bg-[#2D2D2D]"
-                }`}
-                onClick={() => loadSession(session.id)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-200 truncate">
-                      {session.title}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {getModeLabel(session.mode)}
-                    </p>
+        {sidebarOpen && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {sessions.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-8">
+                No chats yet
+              </p>
+            ) : (
+              sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    currentSessionId === session.id
+                      ? "bg-[#2D2D2D]"
+                      : "hover:bg-[#2D2D2D]"
+                  }`}
+                  onClick={() => loadSession(session.id)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-200 truncate">
+                        {session.title}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {getModeLabel(session.mode)}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-[#3A3A3A]"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical size={14} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-[#2D2D2D] border-[#3A3A3A]">
+                        <DropdownMenuItem
+                          onClick={() => deleteSession(session.id)}
+                          className="text-red-400 cursor-pointer"
+                        >
+                          <Trash2 size={14} className="mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 hover:bg-[#3A3A3A]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical size={14} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#2D2D2D] border-[#3A3A3A]">
-                      <DropdownMenuItem
-                        onClick={() => deleteSession(session.id)}
-                        className="text-red-400 cursor-pointer"
-                      >
-                        <Trash2 size={14} className="mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
 
-        <div className="p-4 border-t border-[#2D2D2D]">
+        <div className="p-4 border-t border-[#2D2D2D] mt-auto">
           <Button
             variant="ghost"
             onClick={() => router.push("/settings")}
-            className="w-full justify-start text-gray-400 hover:bg-[#2D2D2D] hover:text-gray-200"
+            className="w-full text-gray-400 hover:bg-[#2D2D2D] hover:text-gray-200 p-2 justify-start"
           >
-            <Settings size={18} className="mr-2" />
-            Settings
+            <Settings size={26} className={sidebarOpen ? "mr-2" : ""} />
+            {sidebarOpen && "Settings"}
           </Button>
         </div>
       </aside>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-[#0F0F0F]">
-        <header className="bg-[#1A1A1A] border-b border-[#2D2D2D] px-6 py-4 flex items-center justify-between">
+        <header className="bg-[#0F0F0F] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-gray-400 hover:bg-[#2D2D2D] hover:text-gray-200"
-            >
-              <Menu size={20} />
-            </Button>
             <h1 className="text-xl font-semibold text-white">Datagent</h1>
           </div>
         </header>
@@ -215,17 +232,17 @@ export default function ChatPage() {
             <div
               className={`flex flex-col items-center gap-3 ${shouldAnimate ? "transition-all duration-700 ease-out" : ""}`}
             >
-              <div className="text-6xl">🧩</div>
-              <h2 className="text-3xl font-light text-gray-200">
+              <div className="text-7xl">🧩</div>
+              <h2 className="text-4xl font-light text-gray-200">
                 Where should we start?
               </h2>
               <p className="text-gray-500 max-w-md">
-                Select a mode and begin your Data Analysis or Preparation task!
+                Select a mode and begin your Analysis or Data Preparation!
               </p>
             </div>
 
             <div
-              className={`w-full max-w-3xl ${shouldAnimate ? "transition-all duration-700 ease-out" : ""}`}
+              className={`w-full max-w-4xl ${shouldAnimate ? "transition-all duration-700 ease-out" : ""}`}
             >
               <div className="bg-[#1F1F1F] border border-[#262626] rounded-[30px] h-auto px-6 py-4 shadow-[0_12px_40px_rgba(0,0,0,0.45)] flex flex-col gap-3 text-gray-200">
                 <input
@@ -270,7 +287,7 @@ export default function ChatPage() {
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="text-gray-200 hover:text-white hover:bg-[#2A2A2A] rounded-lg px-2 py-1.5 transition-all text-base font-medium flex items-center gap-2 shrink-0">
+                        <button className="text-gray-200 hover:text-white hover:bg-[#2A2A2A] rounded-lg px-2 py-1.5 transition-all text-base font-medium flex items-center gap-2 shrink-0 focus:outline-none">
                           <svg
                             width="22"
                             height="22"
@@ -287,7 +304,7 @@ export default function ChatPage() {
                             <path d="M5 18h14" />
                           </svg>
                           <span
-                            className={`${currentMode === "default" ? "text-gray-200" : "text-blue-300 text-lg font-semibold"}`}
+                            className={`${currentMode === "default" ? "text-gray-200" : "text-blue-300 text-lg font-medium"}`}
                           >
                             {currentMode === "default"
                               ? "Tools"
@@ -366,7 +383,7 @@ export default function ChatPage() {
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-2xl ${
+                    className={`max-w-3xl ${
                       message.role === "user"
                         ? "bg-[#2D2D2D] text-gray-100 rounded-2xl rounded-tr-none px-4 py-3"
                         : "text-gray-200 rounded-2xl rounded-tl-none px-4 py-3"
@@ -426,7 +443,7 @@ export default function ChatPage() {
             <div
               className={`bg-[#0F0F0F] px-8 py-8 pb-6 flex justify-center border-t border-[#181818] ${shouldAnimate ? "animate-in slide-in-from-top-8 duration-700" : ""}`}
             >
-              <div className="w-full max-w-3xl space-y-4">
+              <div className="w-full max-w-4xl space-y-4">
                 <div
                   className={`bg-[#1F1F1F] border border-[#262626] rounded-[30px] h-auto px-6 py-4 shadow-[0_12px_40px_rgba(0,0,0,0.45)] flex flex-col gap-3 text-gray-200 ${shouldAnimate ? "animate-in slide-in-from-top-4 duration-700" : ""}`}
                 >
@@ -472,7 +489,7 @@ export default function ChatPage() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="text-gray-200 hover:text-white hover:bg-[#2A2A2A] rounded-lg px-2 py-1.5 transition-all text-base font-medium flex items-center gap-2 shrink-0">
+                          <button className="text-gray-200 hover:text-white hover:bg-[#2A2A2A] rounded-lg px-2 py-1.5 transition-all text-base font-medium flex items-center gap-2 shrink-0 focus:outline-none">
                             <svg
                               width="22"
                               height="22"
@@ -489,7 +506,7 @@ export default function ChatPage() {
                               <path d="M5 18h14" />
                             </svg>
                             <span
-                              className={`${currentMode === "default" ? "text-gray-200" : "text-blue-300 text-lg font-semibold"}`}
+                              className={`${currentMode === "default" ? "text-gray-200" : "text-blue-300 text-lg font-medium"}`}
                             >
                               {currentMode === "default"
                                 ? "Tools"

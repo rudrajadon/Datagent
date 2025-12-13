@@ -71,15 +71,12 @@ export function useChat(): UseChatReturn {
     }
   }, []);
 
-  const persistMessages = useCallback(
-    (sessionId: string, next: Message[]) => {
-      setMessages(next);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`messages-${sessionId}`, JSON.stringify(next));
-      }
-    },
-    []
-  );
+  const persistMessages = useCallback((sessionId: string, next: Message[]) => {
+    setMessages(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`messages-${sessionId}`, JSON.stringify(next));
+    }
+  }, []);
 
   const addMessage = useCallback(
     async (content: string) => {
@@ -100,6 +97,17 @@ export function useChat(): UseChatReturn {
         setCurrentSessionId(newSessionId);
         sessionIdRef.current = newSessionId;
         effectiveSessionId = newSessionId;
+      } else {
+        // Update session title if it's still "New Chat"
+        const session = sessions.find((s) => s.id === effectiveSessionId);
+        if (session && session.title === "New Chat") {
+          const updatedSessions = sessions.map((s) =>
+            s.id === effectiveSessionId
+              ? { ...s, title: content.substring(0, 50) || "New Chat" }
+              : s
+          );
+          persistSessions(updatedSessions);
+        }
       }
 
       // Add user message
@@ -147,7 +155,14 @@ export function useChat(): UseChatReturn {
         setIsLoading(false);
       }
     },
-    [currentSessionId, currentMode, messages, persistMessages, persistSessions, sessions]
+    [
+      currentSessionId,
+      currentMode,
+      messages,
+      persistMessages,
+      persistSessions,
+      sessions,
+    ]
   );
 
   const addFileMessage = useCallback((fileName: string) => {
