@@ -1,6 +1,6 @@
 import "./globals.css";
 import { ReactNode } from "react";
-import { ClerkProvider, SignIn, SignedIn, SignedOut } from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "./providers";
 
 export const metadata = {
@@ -14,14 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body>
-          <Providers>
-            <SignedIn>{children}</SignedIn>
-            <SignedOut>
-              <div className="flex items-center justify-center min-h-screen">
-                <SignIn routing="hash" />
-              </div>
-            </SignedOut>
-          </Providers>
+          <Providers>{children}</Providers>
         </body>
       </html>
     </ClerkProvider>

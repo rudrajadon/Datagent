@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { apiClient } from "@/lib/api-client";
 
 export interface Message {
   id: string;
@@ -21,96 +23,121 @@ export interface ChatSession {
   mode: "default" | "data-analysis" | "data-preparation";
 }
 
-interface UseChatReturn {
-  messages: Message[];
-  isLoading: boolean;
-  currentMode: "default" | "data-analysis" | "data-preparation";
-  currentSessionId: string | null;
-  sessions: ChatSession[];
-  addMessage: (content: string) => Promise<void>;
-  addFileMessage: (fileName: string) => void;
-  setMode: (mode: "default" | "data-analysis" | "data-preparation") => void;
-  createNewSession: () => void;
-  loadSession: (sessionId: string) => void;
-  deleteSession: (sessionId: string) => void;
-  clearMessages: () => void;
-}
-
-/**
- * Custom hook for managing chat state and operations.
- * Handles message management, session management, and API integration.
- * Ready for backend integration via env vars.
- */
-export function useChat(): UseChatReturn {
+export function useChat() {
+  const { getToken, isSignedIn } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<
     "default" | "data-analysis" | "data-preparation"
   >("default");
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const sessionIdRef = useRef<string | null>(null);
 
-  // Load sessions from localStorage on mount (SSR-safe)
+  // Load sessions from localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("chatSessions");
+    const saved = localStorage.getItem("datagent-sessions");
     if (saved) {
       try {
-        setSessions(JSON.parse(saved));
-      } catch {
-        // ignore parse errors
-      }
+        const parsed = JSON.parse(saved);
+        setSessions(
+          parsed.map((s: any) => ({ ...s, createdAt: new Date(s.createdAt) }))
+        );
+      } catch {}
     }
   }, []);
 
+  // Save sessions to localStorage
   const persistSessions = useCallback((next: ChatSession[]) => {
     setSessions(next);
     if (typeof window !== "undefined") {
-      localStorage.setItem("chatSessions", JSON.stringify(next));
+      localStorage.setItem("datagent-sessions", JSON.stringify(next));
     }
   }, []);
 
-  const persistMessages = useCallback((sessionId: string, next: Message[]) => {
-    setMessages(next);
+  // Save messages to localStorage
+  const persistMessages = useCallback((sessionId: string, msgs: Message[]) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(`messages-${sessionId}`, JSON.stringify(next));
+      localStorage.setItem(
+        `datagent-messages-${sessionId}`,
+        JSON.stringify(msgs)
+      );
     }
   }, []);
 
+  // Load messages from localStorage
+  const loadMessages = useCallback((sessionId: string): Message[] => {
+    if (typeof window === "undefined") return [];
+    const saved = localStorage.getItem(`datagent-messages-${sessionId}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved).map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.timestamp),
+        }));
+      } catch {}
+    }
+    return [];
+  }, []);
+
+  // Create new session (local only)
+  const createNewSession = useCallback(async () => {
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Please sign in to start a chat");
+
+      const session = await apiClient.createSession(
+        "New Chat",
+        currentMode,
+        token
+      );
+      const newSession: ChatSession = {
+        id: session.id,
+        title: session.title,
+        createdAt: new Date(session.createdAt),
+        mode: session.mode as ChatSession["mode"],
+      };
+      persistSessions([newSession, ...sessions]);
+      setCurrentSessionId(session.id);
+      setMessages([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create session");
+    }
+  }, [currentMode, sessions, persistSessions, getToken]);
+
+  // Send message
   const addMessage = useCallback(
     async (content: string) => {
       if (!content.trim()) return;
+      setError(null);
 
-      // Ensure session exists
-      let effectiveSessionId = currentSessionId;
-      if (!effectiveSessionId) {
-        const newSessionId = `session-${Date.now()}`;
-        const newSession: ChatSession = {
-          id: newSessionId,
-          title: content.substring(0, 50) || "New Chat",
-          createdAt: new Date(),
-          mode: currentMode,
-        };
-        const nextSessions = [newSession, ...sessions];
-        persistSessions(nextSessions);
-        setCurrentSessionId(newSessionId);
-        sessionIdRef.current = newSessionId;
-        effectiveSessionId = newSessionId;
-      } else {
-        // Update session title if it's still "New Chat"
-        const session = sessions.find((s) => s.id === effectiveSessionId);
-        if (session && session.title === "New Chat") {
-          const updatedSessions = sessions.map((s) =>
-            s.id === effectiveSessionId
-              ? { ...s, title: content.substring(0, 50) || "New Chat" }
-              : s
-          );
-          persistSessions(updatedSessions);
-        }
+      // Ensure we have a persisted session on the backend
+      let sessionId = currentSessionId;
+      const token = await getToken();
+      if (!token) {
+        throw new Error("Please sign in to continue");
       }
 
-      // Add user message
+      if (!sessionId) {
+        const session = await apiClient.createSession(
+          content.substring(0, 40) || "New Chat",
+          currentMode,
+          token
+        );
+        const newSession: ChatSession = {
+          id: session.id,
+          title: session.title,
+          createdAt: new Date(session.createdAt),
+          mode: session.mode as ChatSession["mode"],
+        };
+        persistSessions([newSession, ...sessions]);
+        setCurrentSessionId(session.id);
+        sessionId = session.id;
+      }
+
+      // Add user message immediately
       const userMessage: Message = {
         id: `msg-${Date.now()}`,
         role: "user",
@@ -118,39 +145,53 @@ export function useChat(): UseChatReturn {
         timestamp: new Date(),
       };
 
-      const nextMessages = [...messages, userMessage];
-      setMessages(nextMessages);
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
       setIsLoading(true);
 
       try {
-        // Placeholder for backend API call
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/chat`, { ... });
-        // const data = await res.json();
+        // Call backend API
+        const response = await apiClient.chat(
+          {
+            sessionId,
+            message: content,
+            mode: currentMode,
+          },
+          token
+        );
 
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // simulate delay
-
+        // Add assistant message
         const assistantMessage: Message = {
           id: `msg-${Date.now() + 1}`,
           role: "assistant",
-          content: `This is a placeholder response for **${currentMode}** mode. In production, this would be powered by Gemini 1.5 Pro.`,
+          content: response.assistantMessage,
           timestamp: new Date(),
+          artifacts: response.artifacts,
         };
 
-        const finalMessages = [...nextMessages, assistantMessage];
-        if (effectiveSessionId) {
-          persistMessages(effectiveSessionId, finalMessages);
-        } else {
-          setMessages(finalMessages);
+        const finalMessages = [...updatedMessages, assistantMessage];
+        setMessages(finalMessages);
+        persistMessages(sessionId!, finalMessages);
+
+        // Update session title if first message
+        if (messages.length === 0) {
+          const updatedSessions = sessions.map((s) =>
+            s.id === sessionId ? { ...s, title: content.substring(0, 40) } : s
+          );
+          persistSessions(updatedSessions);
         }
-      } catch (error) {
-        console.error("Failed to send message:", error);
-        const errorMessage: Message = {
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to send message";
+        setError(errorMessage);
+
+        const errorMsg: Message = {
           id: `msg-${Date.now() + 2}`,
           role: "assistant",
-          content: "Sorry, there was an error processing your request.",
+          content: `❌ Error: ${errorMessage}`,
           timestamp: new Date(),
         };
-        setMessages((prev) => [...prev, errorMessage]);
+        setMessages([...updatedMessages, errorMsg]);
       } finally {
         setIsLoading(false);
       }
@@ -159,106 +200,127 @@ export function useChat(): UseChatReturn {
       currentSessionId,
       currentMode,
       messages,
-      persistMessages,
-      persistSessions,
       sessions,
+      getToken,
+      persistSessions,
+      persistMessages,
     ]
   );
 
+  // Upload file
+  const uploadFile = useCallback(
+    async (file: File) => {
+      if (!currentSessionId) {
+        setError("Please start a chat first");
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const token = await getToken();
+        if (!token) throw new Error("Please sign in to upload files");
+
+        const response = await apiClient.uploadFile(
+          file,
+          currentSessionId,
+          token
+        );
+
+        const fileMessage: Message = {
+          id: `msg-${Date.now()}`,
+          role: "user",
+          content: `📎 Uploaded: **${response.fileName}** (${(response.fileSize / 1024).toFixed(1)} KB)`,
+          timestamp: new Date(),
+          artifacts: {
+            fileUrl: response.fileUrl,
+            fileName: response.fileName,
+          },
+        };
+
+        const updatedMessages = [...messages, fileMessage];
+        setMessages(updatedMessages);
+        persistMessages(currentSessionId, updatedMessages);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentSessionId, messages, getToken, persistMessages]
+  );
+
+  // Add file message (display only)
   const addFileMessage = useCallback((fileName: string) => {
     const fileMessage: Message = {
       id: `msg-${Date.now()}`,
       role: "user",
-      content: `📎 Uploaded file: ${fileName}`,
+      content: `📎 Uploaded: **${fileName}**`,
       timestamp: new Date(),
       artifacts: { fileName },
     };
     setMessages((prev) => [...prev, fileMessage]);
   }, []);
 
+  // Set mode
   const setMode = useCallback(
     (mode: "default" | "data-analysis" | "data-preparation") => {
       setCurrentMode(mode);
-      if (currentSessionId) {
-        const updatedSessions = sessions.map((s) =>
-          s.id === currentSessionId ? { ...s, mode } : s
-        );
-        persistSessions(updatedSessions);
-      }
     },
-    [currentSessionId, persistSessions, sessions]
+    []
   );
 
-  const createNewSession = useCallback(() => {
-    const newSessionId = `session-${Date.now()}`;
-    const newSession: ChatSession = {
-      id: newSessionId,
-      title: "New Chat",
-      createdAt: new Date(),
-      mode: "default",
-    };
-    const nextSessions = [newSession, ...sessions];
-    persistSessions(nextSessions);
-    setCurrentSessionId(newSessionId);
-    sessionIdRef.current = newSessionId;
-    setMessages([]);
-    setCurrentMode("default");
-  }, [persistSessions, sessions]);
-
+  // Load session
   const loadSession = useCallback(
     (sessionId: string) => {
       setCurrentSessionId(sessionId);
       const session = sessions.find((s) => s.id === sessionId);
       if (session) {
         setCurrentMode(session.mode);
-        if (typeof window !== "undefined") {
-          const saved = localStorage.getItem(`messages-${sessionId}`);
-          if (saved) {
-            try {
-              setMessages(JSON.parse(saved));
-            } catch {
-              setMessages([]);
-            }
-          } else {
-            setMessages([]);
-          }
-        }
+        setMessages(loadMessages(sessionId));
       }
+      setError(null);
     },
-    [sessions]
+    [sessions, loadMessages]
   );
 
+  // Delete session
   const deleteSession = useCallback(
     (sessionId: string) => {
-      const next = sessions.filter((s) => s.id !== sessionId);
-      persistSessions(next);
+      persistSessions(sessions.filter((s) => s.id !== sessionId));
       if (typeof window !== "undefined") {
-        localStorage.removeItem(`messages-${sessionId}`);
+        localStorage.removeItem(`datagent-messages-${sessionId}`);
       }
       if (currentSessionId === sessionId) {
         setCurrentSessionId(null);
         setMessages([]);
       }
     },
-    [currentSessionId, persistSessions, sessions]
+    [currentSessionId, sessions, persistSessions]
   );
 
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-  }, []);
+  // Clear messages
+  const clearMessages = useCallback(() => setMessages([]), []);
+
+  // Clear error
+  const clearError = useCallback(() => setError(null), []);
 
   return {
     messages,
     isLoading,
+    error,
     currentMode,
     currentSessionId,
     sessions,
     addMessage,
     addFileMessage,
+    uploadFile,
     setMode,
     createNewSession,
     loadSession,
     deleteSession,
     clearMessages,
+    clearError,
   };
 }

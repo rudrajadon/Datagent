@@ -1,26 +1,16 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { apiClient } from "@/lib/api-client";
 
-interface UseVoiceRecordingReturn {
-  isRecording: boolean;
-  isProcessing: boolean;
-  error: string | null;
-  startRecording: () => Promise<void>;
-  stopRecording: () => Promise<string | null>;
-  cancelRecording: () => void;
-}
-
-/**
- * Voice recording + placeholder transcription hook.
- * Replace the transcription stub with a POST /transcribe call.
- */
-export function useVoiceRecording(): UseVoiceRecordingReturn {
+export function useVoiceRecording() {
+  const { getToken } = useAuth();
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
 
   const startRecording = useCallback(async () => {
@@ -31,19 +21,18 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
 
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+      chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
       };
 
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to access microphone";
-      setError(errorMessage);
-      console.error("Recording error:", err);
+      setError(err instanceof Error ? err.message : "Microphone access denied");
     }
   }, []);
 
@@ -54,46 +43,32 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
         return;
       }
 
-      const mediaRecorder = mediaRecorderRef.current;
-
-      mediaRecorder.onstop = async () => {
+      mediaRecorderRef.current.onstop = async () => {
         setIsRecording(false);
         setIsProcessing(true);
 
         try {
-          const audioBlob = new Blob(audioChunksRef.current, {
-            type: "audio/wav",
-          });
+          const audioBlob = new Blob(chunksRef.current, { type: "audio/wav" });
+          const token = await getToken();
+          if (!token) {
+            throw new Error("Please sign in to transcribe audio");
+          }
 
-          // TODO: Replace with real transcription:
-          // const formData = new FormData();
-          // formData.append("audio", audioBlob);
-          // const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/transcribe`, {
-          //   method: "POST",
-          //   body: formData,
-          // });
-          // const data = await res.json();
-          // const transcript = data.transcript;
-
-          await new Promise((r) => setTimeout(r, 500));
-          const transcript = "Voice input recorded. Ready for backend integration.";
-
+          const response = await apiClient.transcribeAudio(audioBlob, token);
           setIsProcessing(false);
-          resolve(transcript);
+          resolve(response.transcript);
         } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Transcription failed";
-          setError(errorMessage);
+          setError(err instanceof Error ? err.message : "Transcription failed");
           setIsProcessing(false);
           resolve(null);
         } finally {
           if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current.getTracks().forEach((t) => t.stop());
           }
         }
       };
 
-      mediaRecorder.stop();
+      mediaRecorderRef.current.stop();
     });
   }, []);
 
@@ -103,9 +78,9 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
       setIsRecording(false);
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
     }
-    audioChunksRef.current = [];
+    chunksRef.current = [];
   }, []);
 
   return {

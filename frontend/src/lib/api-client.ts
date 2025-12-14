@@ -11,17 +11,17 @@
  */
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
 
-interface ChatRequest {
+export interface ChatRequest {
   sessionId: string;
   message: string;
   mode: "default" | "data-analysis" | "data-preparation";
 }
 
-interface ChatResponse {
+export interface ChatResponse {
   assistantMessage: string;
+  mode: string;
   artifacts?: {
     imageBase64?: string;
     fileUrl?: string;
@@ -29,74 +29,100 @@ interface ChatResponse {
   };
 }
 
-interface TranscribeResponse {
+export interface TranscribeResponse {
   transcript: string;
+  language?: string;
 }
 
-interface UploadResponse {
+export interface UploadResponse {
   success: boolean;
   fileName: string;
   fileSize: number;
+  fileUrl?: string;
+  version?: string;
+}
+
+export interface SessionResponse {
+  id: string;
+  title: string;
+  mode: string;
+  createdAt: string;
 }
 
 class APIClient {
   private baseUrl: string;
-  private apiKey: string;
 
-  constructor(baseUrl: string, apiKey?: string) {
+  constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-    this.apiKey = apiKey || "";
   }
 
-  private getHeaders(json = true): HeadersInit {
-    const headers: HeadersInit = json ? { "Content-Type": "application/json" } : {};
-    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+  private getHeaders(token?: string, json = true): HeadersInit {
+    const headers: HeadersInit = json
+      ? { "Content-Type": "application/json" }
+      : {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
     return headers;
   }
 
   /**
    * Send a chat message to the backend
    */
-  async chat(request: ChatRequest): Promise<ChatResponse> {
+  async chat(request: ChatRequest, token: string): Promise<ChatResponse> {
     const response = await fetch(`${this.baseUrl}/chat`, {
       method: "POST",
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(token, true),
       body: JSON.stringify(request),
     });
-    if (!response.ok) throw new Error(`Chat API error: ${response.statusText}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `API error: ${response.status}`);
+    }
     return response.json();
   }
 
   /**
    * Upload a file to the backend
    */
-  async uploadFile(file: File, sessionId: string): Promise<UploadResponse> {
+  async uploadFile(
+    file: File,
+    sessionId: string,
+    token: string
+  ): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("sessionId", sessionId);
 
     const response = await fetch(`${this.baseUrl}/upload`, {
       method: "POST",
-      headers: this.getHeaders(false),
+      headers: this.getHeaders(token, false),
       body: formData,
     });
-    if (!response.ok) throw new Error(`Upload API error: ${response.statusText}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Upload error: ${response.status}`);
+    }
     return response.json();
   }
 
   /**
    * Transcribe audio to text using Whisper ASR
    */
-  async transcribeAudio(audioBlob: Blob): Promise<TranscribeResponse> {
+  async transcribeAudio(
+    audioBlob: Blob,
+    token?: string
+  ): Promise<TranscribeResponse> {
     const formData = new FormData();
     formData.append("audio", audioBlob, "audio.wav");
 
     const response = await fetch(`${this.baseUrl}/transcribe`, {
       method: "POST",
-      headers: this.getHeaders(false),
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: formData,
     });
-    if (!response.ok) throw new Error(`Transcribe API error: ${response.statusText}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Transcribe error: ${response.status}`);
+    }
     return response.json();
   }
 
@@ -105,9 +131,9 @@ class APIClient {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`, {
+      const response = await fetch(this.baseUrl.replace("/api", "/health"), {
         method: "GET",
-        headers: this.getHeaders(true),
+        headers: { "Content-Type": "application/json" },
       });
       return response.ok;
     } catch (error) {
@@ -115,10 +141,27 @@ class APIClient {
       return false;
     }
   }
+
+  async createSession(
+    title: string,
+    mode: string,
+    token: string
+  ): Promise<SessionResponse> {
+    const response = await fetch(`${this.baseUrl}/sessions`, {
+      method: "POST",
+      headers: this.getHeaders(token, true),
+      body: JSON.stringify({ title, mode }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Session error: ${response.status}`);
+    }
+    return response.json();
+  }
 }
 
 // Export singleton instance
-export const apiClient = new APIClient(API_URL, API_KEY);
+export const apiClient = new APIClient(API_URL);
 
 // Export class for testing
 export { APIClient };
