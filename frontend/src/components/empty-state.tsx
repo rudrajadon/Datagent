@@ -45,7 +45,7 @@ export function EmptyState({
         <h2 className="text-4xl font-light text-gray-200">
           Where should we start?
         </h2>
-        <p className="text-gray-500 max-w-md text-lg">
+        <p className="text-gray-500 max-w">
           Select a mode and begin your Data Analysis or Preparation task!
         </p>
       </div>
