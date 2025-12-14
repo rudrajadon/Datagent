@@ -21,7 +21,7 @@ export function ChatMessages({
 }: ChatMessagesProps) {
   return (
     <div
-      className={`flex-1 overflow-y-auto p-8 space-y-6 ${
+      className={`flex-1 overflow-y-auto p-8 space-y-6 scroll-smooth ${
         shouldAnimate ? "animate-in fade-in duration-700" : ""
       }`}
     >

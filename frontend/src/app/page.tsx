@@ -127,13 +127,7 @@ export default function ChatPage() {
             onVoiceStop={handleVoiceStop}
           />
         ) : (
-          <div
-            className={`flex-1 flex flex-col bg-[#0F0F0F] overflow-hidden ${
-              shouldAnimate
-                ? "animate-in fade-in slide-in-from-top-4 duration-700"
-                : ""
-            }`}
-          >
+          <div className={`flex-1 flex flex-col bg-[#0F0F0F] overflow-hidden`}>
             <ChatMessages
               messages={messages}
               isLoading={isLoading}
@@ -156,6 +150,7 @@ export default function ChatPage() {
               onVoiceStart={handleVoiceStart}
               onVoiceStop={handleVoiceStop}
               shouldAnimate={shouldAnimate}
+              modeLocked={messages.length > 0}
             />
           </div>
         )}

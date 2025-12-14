@@ -4,7 +4,7 @@ import { ClerkProvider, SignIn, SignedIn, SignedOut } from "@clerk/nextjs";
 import { Providers } from "./providers";
 
 export const metadata = {
-  title: "Datagent | Gemini Data Forge",
+  title: "Datagent | Rudra Jadon",
   description:
     "Multimodal data analysis and preparation powered by Gemini 1.5 Pro",
 };

@@ -33,7 +33,9 @@ export default function SettingsPage() {
 
       <main className="max-w-4xl mx-auto p-6 space-y-6">
         <Card className="p-6 border border-[#2D2D2D] bg-[#1A1A1A]">
-          <h2 className="text-lg font-semibold text-gray-100 mb-4">Appearance</h2>
+          <h2 className="text-lg font-semibold text-gray-100 mb-4">
+            Appearance
+          </h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -49,17 +51,24 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+              <Switch
+                checked={theme === "dark"}
+                onCheckedChange={toggleTheme}
+              />
             </div>
           </div>
         </Card>
 
         <Card className="p-6 border border-[#2D2D2D] bg-[#1A1A1A]">
-          <h2 className="text-lg font-semibold text-gray-100 mb-4">Preferences</h2>
+          <h2 className="text-lg font-semibold text-gray-100 mb-4">
+            Preferences
+          </h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-100">Auto-save Conversations</p>
+                <p className="font-medium text-gray-100">
+                  Auto-save Conversations
+                </p>
                 <p className="text-sm text-gray-500">
                   Automatically save your chat history
                 </p>
@@ -74,7 +83,10 @@ export default function SettingsPage() {
                   Receive notifications for completed analyses
                 </p>
               </div>
-              <Switch checked={notifications} onCheckedChange={setNotifications} />
+              <Switch
+                checked={notifications}
+                onCheckedChange={setNotifications}
+              />
             </div>
           </div>
         </Card>
@@ -83,29 +95,35 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-gray-100 mb-4">About</h2>
           <div className="space-y-2 text-sm text-gray-500">
             <p>
-              <span className="font-medium text-gray-300">Application:</span> Datagent
+              <span className="font-medium text-gray-300">Application:</span>{" "}
+              Datagent
             </p>
             <p>
               <span className="font-medium text-gray-300">Version:</span> 1.0.0
             </p>
             <p>
-              <span className="font-medium text-gray-300">Powered by:</span> Gemini 1.5 Pro
+              <span className="font-medium text-gray-300">Powered by:</span>{" "}
+              Gemini 1.5 Pro
             </p>
             <p className="mt-4">
-              Professional data analysis and preparation tool designed for seamless backend integration.
+              Professional data analysis and preparation tool designed for
+              seamless backend integration.
             </p>
           </div>
         </Card>
 
         <Card className="p-6 border border-[#2D2D2D] bg-[#1A1A1A]">
-          <h2 className="text-lg font-semibold text-gray-100 mb-4">API Configuration</h2>
+          <h2 className="text-lg font-semibold text-gray-100 mb-4">
+            API Configuration
+          </h2>
           <div className="space-y-2 text-sm text-gray-500 break-all">
             <p>
               <span className="font-medium text-gray-300">Backend URL:</span>{" "}
               {process.env.NEXT_PUBLIC_API_BASE_URL || "Not configured"}
             </p>
             <p className="text-xs text-gray-600 mt-2">
-              The frontend is configured to communicate with the backend API for chat, file uploads, and voice transcription.
+              The frontend is configured to communicate with the backend API for
+              chat, file uploads, and voice transcription.
             </p>
           </div>
         </Card>

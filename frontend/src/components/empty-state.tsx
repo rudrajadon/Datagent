@@ -38,15 +38,9 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex-1 flex flex-col items-center justify-center bg-[#0F0F0F] px-8 pb-10 gap-8 text-center ${
-        shouldAnimate ? "transition-all duration-700 ease-out" : ""
-      }`}
+      className={`flex-1 flex flex-col items-center justify-center bg-[#0F0F0F] px-8 pb-10 gap-8 text-center`}
     >
-      <div
-        className={`flex flex-col items-center gap-3 ${
-          shouldAnimate ? "transition-all duration-700 ease-out" : ""
-        }`}
-      >
+      <div className={`flex flex-col items-center gap-3`}>
         <div className="text-7xl">🧩</div>
         <h2 className="text-4xl font-light text-gray-200">
           Where should we start?
