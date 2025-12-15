@@ -3,8 +3,8 @@ import { config } from "../config/env";
 
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
-// Use the base Gemini Pro model (stable v1 API compatible)
-const GEMINI_MODEL = "gemini-pro";
+// Use the Gemini 1.5 Flash model for text generation
+const GEMINI_MODEL = "gemini-1.5-flash";
 
 export type IntentType = "ANALYSIS" | "PREPARATION" | "GENERAL";
 
