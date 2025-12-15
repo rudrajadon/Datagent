@@ -1,10 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { config } from "../config/env";
 
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
-// Use the base Gemini Pro model (stable v1 API compatible)
-const GEMINI_MODEL = "gemini-pro";
+// Use the Gemini 1.5 Flash model for text generation
+const GEMINI_MODEL = "gemini-1.5-flash";
+const OPENAI_MODEL = "gpt-4o-mini";
 
 export type IntentType = "ANALYSIS" | "PREPARATION" | "GENERAL";
 
@@ -174,6 +178,33 @@ Be concise, friendly, and helpful. If the user hasn't uploaded data yet, remind 
     return result.response.text();
   } catch (error) {
     console.error("[Gemini] Chat response failed:", error);
-    throw new Error("Failed to generate response");
+    if (!config.openaiApiKey) {
+      throw new Error("Failed to generate response");
+    }
+
+    // Fallback to OpenAI chat if Gemini is unavailable
+    const openAiMessages: ChatCompletionMessageParam[] = [
+      { role: "system", content: systemPrompt },
+      ...conversationHistory.map<ChatCompletionMessageParam>((msg) => ({
+        role: msg.role === "user" ? "user" : "assistant",
+        content: msg.content,
+      })),
+      { role: "user", content: userMessage },
+    ];
+
+    try {
+      const openAiResponse = await openai.chat.completions.create({
+        model: OPENAI_MODEL,
+        messages: openAiMessages,
+      });
+
+      return (
+        openAiResponse.choices[0]?.message?.content ||
+        "I encountered an issue generating a response, but I'm here to help. Could you try again?"
+      );
+    } catch (fallbackError) {
+      console.error("[OpenAI] Chat response failed:", fallbackError);
+      throw new Error("Failed to generate response");
+    }
   }
 }
